@@ -6,7 +6,7 @@ from typing import List, Literal
 from PIL import Image
 import io, random, os
 
-# ---------- NEW: SQLAlchemy async setup ----------
+# ---------- SQLAlchemy (async) ----------
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy import Column, text, select
@@ -14,15 +14,43 @@ from sqlalchemy.types import Text, DateTime
 from sqlalchemy.dialects.postgresql import UUID, CITEXT
 from sqlalchemy.exc import IntegrityError
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL is not set")
-
-engine = create_async_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
-AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+# --- SQLAlchemy base & deferred engine/session (safe pattern) ---
 Base = declarative_base()
+engine = None
+AsyncSessionLocal = None
+
+def _normalize_db_url(url: str) -> str:
+    """Ensure we use the async driver so SQLAlchemy doesn't try psycopg2."""
+    if url.startswith("postgres://"):
+        return "postgresql+asyncpg://" + url[len("postgres://"):]
+    if url.startswith("postgresql://"):
+        return "postgresql+asyncpg://" + url[len("postgresql://"):]
+    return url
+
+def init_db():
+    global engine, AsyncSessionLocal
+    if engine is None:
+        url = os.getenv("DATABASE_URL")
+        if not url:
+            raise RuntimeError("DATABASE_URL is not set. Add it in Render → Environment tab.")
+        url = _normalize_db_url(url)
+        if not url.startswith("postgresql+asyncpg://"):
+            raise RuntimeError(
+                "DATABASE_URL must use the async driver. "
+                "Example: postgresql+asyncpg://user:pass@host:5432/dbname"
+            )
+        engine = create_async_engine(
+            url,
+            echo=False,
+            pool_pre_ping=True,
+            pool_size=5,
+            max_overflow=5,
+        )
+        AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 async def get_session():
+    if AsyncSessionLocal is None:
+        init_db()
     async with AsyncSessionLocal() as session:
         yield session
 
@@ -45,7 +73,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Models (your existing) ---
+# ---------- Domain models (existing) ----------
 Label = Literal["benign", "malignant"]
 Difficulty = Literal["easy", "med", "hard"]
 
@@ -65,7 +93,7 @@ class InferResponse(BaseModel):
     probs: dict
     camPngUrl: str
 
-# --- In-memory sample data (your existing) ---
+# --- In-memory sample data (existing) ---
 CASES: List[Case] = [
     Case(
         id="case_001",
@@ -83,7 +111,7 @@ CASES: List[Case] = [
     ),
 ]
 
-# ---------- NEW: Waitlist DB model + schema ----------
+# ---------- Waitlist DB model + schema ----------
 class WaitlistSubscriber(Base):
     __tablename__ = "waitlist_subscribers"
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
@@ -95,33 +123,17 @@ class WaitlistCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     email: EmailStr
 
-# ---------- Startup: create tables if missing (safe for dev) ----------
-# safe pattern
-engine = None
-AsyncSessionLocal = None
-
-def init_db():
-    from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-    from sqlalchemy.orm import sessionmaker
-    import os
-    global engine, AsyncSessionLocal
-    if engine is None:
-        url = os.getenv("DATABASE_URL")
-        if not url:
-            raise RuntimeError("DATABASE_URL is not set. Add it in Render → Environment.")
-        engine = create_async_engine(url, pool_pre_ping=True, pool_size=5, max_overflow=5)
-        AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-
+# ---------- App startup: create extensions + tables ----------
 @app.on_event("startup")
 async def on_startup():
     init_db()
     async with engine.begin() as conn:
-        # comment these two if your DB role can't create extensions
+        # If your DB role cannot create extensions, comment these two lines
         await conn.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS pgcrypto;")
         await conn.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS citext;")
         await conn.run_sync(Base.metadata.create_all)
 
-# --- Routes (your existing) ---
+# ---------- Routes (existing) ----------
 @app.get("/health")
 def health():
     return {"ok": True}
@@ -154,16 +166,15 @@ async def infer(file: UploadFile = File(...)):
         camPngUrl="https://dummyimage.com/600x600/cccccc/000000.png&text=Heatmap+Placeholder",
     )
 
-# ---------- NEW: Waitlist endpoints ----------
+# ---------- Waitlist endpoints ----------
 @app.post("/waitlist", status_code=status.HTTP_201_CREATED)
 async def join_waitlist(payload: WaitlistCreate, db: AsyncSession = Depends(get_session)):
     name = payload.name.strip()
-    email = payload.email
+    email = payload.email  # EmailStr validates; CITEXT makes it case-insensitive
 
-    # Friendly fast-path (unique index remains source of truth)
+    # Fast path: friendly message if already present
     existing = await db.execute(select(WaitlistSubscriber).where(WaitlistSubscriber.email == email))
     if existing.scalar_one_or_none():
-        # Return 200 to let your UI treat "already on list" as success
         return {"ok": True, "message": "Already on the waitlist."}
 
     record = WaitlistSubscriber(name=name, email=email)
@@ -178,7 +189,6 @@ async def join_waitlist(payload: WaitlistCreate, db: AsyncSession = Depends(get_
 
 @app.post("/waitlist/check")
 async def check_waitlist(payload: WaitlistCreate, db: AsyncSession = Depends(get_session)):
-    """Idempotent: returns whether an email is already registered (for UX)."""
     q = await db.execute(select(WaitlistSubscriber).where(WaitlistSubscriber.email == payload.email))
     exists = q.scalar_one_or_none() is not None
     return {"ok": True, "exists": exists}

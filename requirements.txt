@@ -3,10 +3,10 @@ uvicorn[standard]==0.37.0
 pillow==11.3.0
 python-multipart==0.0.20
 
-# pydantic + email validator (v2)
+# Pydantic v2 + email validation
 pydantic[email]==2.11.9
 email-validator==2.2.0
 
-# DB stack
+# DB stack (async Postgres)
 sqlalchemy[asyncio]==2.0.43
 asyncpg==0.30.0
