@@ -96,15 +96,29 @@ class WaitlistCreate(BaseModel):
     email: EmailStr
 
 # ---------- Startup: create tables if missing (safe for dev) ----------
+# safe pattern
+engine = None
+AsyncSessionLocal = None
+
+def init_db():
+    from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+    from sqlalchemy.orm import sessionmaker
+    import os
+    global engine, AsyncSessionLocal
+    if engine is None:
+        url = os.getenv("DATABASE_URL")
+        if not url:
+            raise RuntimeError("DATABASE_URL is not set. Add it in Render → Environment.")
+        engine = create_async_engine(url, pool_pre_ping=True, pool_size=5, max_overflow=5)
+        AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
 @app.on_event("startup")
 async def on_startup():
-    # Create required extensions (safe to run repeatedly)
+    init_db()
     async with engine.begin() as conn:
-        # Enable UUID generator + case-insensitive email type
+        # comment these two if your DB role can't create extensions
         await conn.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS pgcrypto;")
         await conn.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS citext;")
-
-        # Create tables if they don't exist yet
         await conn.run_sync(Base.metadata.create_all)
 
 # --- Routes (your existing) ---
