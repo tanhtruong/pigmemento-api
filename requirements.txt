@@ -1,7 +1,7 @@
-fastapi==0.115.0
-uvicorn[standard]==0.30.6
-pillow==10.4.0
-pydantic[email-validator]==2.9.2
-python-multipart==0.0.9
-sqlalchemy[asyncio]==2.0.34
-asyncpg==0.29.0
+fastapi
+uvicorn[standard]
+pillow
+pydantic[email-validator]>=2
+python-multipart
+sqlalchemy[asyncio]
+asyncpg
