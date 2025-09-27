@@ -98,8 +98,13 @@ class WaitlistCreate(BaseModel):
 # ---------- Startup: create tables if missing (safe for dev) ----------
 @app.on_event("startup")
 async def on_startup():
+    # Create required extensions (safe to run repeatedly)
     async with engine.begin() as conn:
-        # Only creates if not exists; for prod, switch to Alembic migrations
+        # Enable UUID generator + case-insensitive email type
+        await conn.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS pgcrypto;")
+        await conn.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS citext;")
+
+        # Create tables if they don't exist yet
         await conn.run_sync(Base.metadata.create_all)
 
 # --- Routes (your existing) ---
