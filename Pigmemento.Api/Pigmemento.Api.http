@@ -1,0 +1,6 @@
+@Pigmemento.Api_HostAddress = http://localhost:5197
+
+GET {{Pigmemento.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
