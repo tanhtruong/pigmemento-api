@@ -1,5 +1,4 @@
-# main.py
-from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, status
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, status, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 from typing import List, Literal
@@ -13,6 +12,15 @@ from sqlalchemy import Column, text, select
 from sqlalchemy.types import Text, DateTime
 from sqlalchemy.dialects.postgresql import UUID, CITEXT
 from sqlalchemy.exc import IntegrityError
+
+# Load .env only in local development (not in production on Render)
+if os.getenv("RENDER") is None:  # Render sets RENDER=1 internally
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+        print("[startup] .env loaded (local dev).")
+    except ImportError:
+        print("[startup] python-dotenv not installed, skipping .env load.")
 
 # --- SQLAlchemy base & deferred engine/session (safe pattern) ---
 Base = declarative_base()
@@ -61,6 +69,7 @@ app = FastAPI(title="Pigmemento API", version="0.1.0")
 ALLOWED_ORIGINS = [
     "https://pigmemento.app",
     "https://www.pigmemento.app",
+    "http://localhost:5173",
     "http://localhost:19006",   # Expo web preview
     "http://localhost:8081",    # Metro bundler
     "exp://",                   # Expo native scheme
@@ -167,25 +176,34 @@ async def infer(file: UploadFile = File(...)):
     )
 
 # ---------- Waitlist endpoints ----------
-@app.post("/waitlist", status_code=status.HTTP_201_CREATED)
-async def join_waitlist(payload: WaitlistCreate, db: AsyncSession = Depends(get_session)):
+@app.post("/waitlist")
+async def join_waitlist(
+    payload: WaitlistCreate,
+    response: Response,
+    db: AsyncSession = Depends(get_session),
+):
     name = payload.name.strip()
     email = payload.email  # EmailStr validates; CITEXT makes it case-insensitive
 
-    # Fast path: friendly message if already present
-    existing = await db.execute(select(WaitlistSubscriber).where(WaitlistSubscriber.email == email))
+    # Check if already signed up
+    existing = await db.execute(
+        select(WaitlistSubscriber).where(WaitlistSubscriber.email == email)
+    )
     if existing.scalar_one_or_none():
+        response.status_code = status.HTTP_200_OK
         return {"ok": True, "message": "Already on the waitlist."}
 
+    # Try to add new subscriber
     record = WaitlistSubscriber(name=name, email=email)
     db.add(record)
     try:
         await db.commit()
+        response.status_code = status.HTTP_201_CREATED
+        return {"ok": True, "message": "Added to waitlist!"}
     except IntegrityError:
         await db.rollback()
+        response.status_code = status.HTTP_200_OK
         return {"ok": True, "message": "Already on the waitlist."}
-
-    return {"ok": True, "message": "Added to waitlist!"}
 
 @app.post("/waitlist/check")
 async def check_waitlist(payload: WaitlistCreate, db: AsyncSession = Depends(get_session)):
