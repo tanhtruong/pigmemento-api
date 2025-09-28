@@ -129,8 +129,8 @@ async def on_startup():
     init_db()
     async with engine.begin() as conn:
         # If your DB role cannot create extensions, comment these two lines
-        await conn.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS pgcrypto;")
-        await conn.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS citext;")
+        # await conn.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS pgcrypto;")
+        # await conn.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS citext;")
         await conn.run_sync(Base.metadata.create_all)
 
 # ---------- Routes (existing) ----------
