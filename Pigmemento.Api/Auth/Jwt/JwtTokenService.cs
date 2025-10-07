@@ -28,7 +28,8 @@ public class JwtTokenService : IJwtTokenService
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new(JwtRegisteredClaimNames.Email, user.Email),
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(ClaimTypes.Name, user.Name ?? user.Email)
+            new(ClaimTypes.Name, user.Name ?? user.Email),
+            new(ClaimTypes.Role, user.Role)
         };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_opts.SigningKey));

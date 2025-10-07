@@ -10,6 +10,7 @@ using Pigmemento.Api.Auth.Core;
 using Pigmemento.Api.Auth.Jwt;
 using Microsoft.AspNetCore.Identity;
 using Pigmemento.Api.Models;
+using System.Security.Claims;
 
 Env.Load(); // keep if you use a .env file
 
@@ -43,6 +44,8 @@ var jwtOpts = new JwtOptions
 
 // Auth services
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<Pigmemento.Api.Core.Interfaces.IProgressService,
+                           Pigmemento.Api.Core.Services.ProgressService>();
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 // If your JwtTokenService expects JwtOptions directly:
 builder.Services.AddSingleton<IJwtTokenService>(_ => new JwtTokenService(jwtOpts));
@@ -60,12 +63,13 @@ builder.Services
         {
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOpts.SigningKey)),
-            ValidateIssuer   = !string.IsNullOrWhiteSpace(jwtOpts.Issuer),
-            ValidIssuer      = string.IsNullOrWhiteSpace(jwtOpts.Issuer) ? null : jwtOpts.Issuer,
+            ValidateIssuer = !string.IsNullOrWhiteSpace(jwtOpts.Issuer),
+            ValidIssuer = string.IsNullOrWhiteSpace(jwtOpts.Issuer) ? null : jwtOpts.Issuer,
             ValidateAudience = !string.IsNullOrWhiteSpace(jwtOpts.Audience),
-            ValidAudience    = string.IsNullOrWhiteSpace(jwtOpts.Audience) ? null : jwtOpts.Audience,
+            ValidAudience = string.IsNullOrWhiteSpace(jwtOpts.Audience) ? null : jwtOpts.Audience,
             ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromMinutes(1)
+            ClockSkew = TimeSpan.FromMinutes(1),
+            RoleClaimType = ClaimTypes.Role
         };
     });
 

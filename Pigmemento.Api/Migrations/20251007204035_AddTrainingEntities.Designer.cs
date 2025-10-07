@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pigmemento.Api.Data;
@@ -11,9 +12,11 @@ using Pigmemento.Api.Data;
 namespace Pigmemento.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251007204035_AddTrainingEntities")]
+    partial class AddTrainingEntities
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -130,48 +133,40 @@ namespace Pigmemento.Api.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at_utc")
                         .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
 
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("citext")
-                        .HasColumnName("email");
+                        .HasColumnType("citext");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
-                        .HasDefaultValue(true)
-                        .HasColumnName("is_active");
+                        .HasDefaultValue(true);
 
                     b.Property<DateTime?>("LastLoginUtc")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_login_utc");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Name")
                         .HasMaxLength(128)
-                        .HasColumnType("character varying(128)")
-                        .HasColumnName("name");
+                        .HasColumnType("character varying(128)");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("password_hash");
+                        .HasColumnType("text");
 
                     b.Property<string>("Role")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)")
-                        .HasDefaultValue("user")
-                        .HasColumnName("role");
+                        .HasDefaultValue("user");
 
                     b.HasKey("Id");
 
