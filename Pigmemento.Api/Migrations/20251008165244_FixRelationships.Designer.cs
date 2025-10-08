@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pigmemento.Api.Data;
@@ -11,9 +12,11 @@ using Pigmemento.Api.Data;
 namespace Pigmemento.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251008165244_FixRelationships")]
+    partial class FixRelationships
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -231,7 +234,7 @@ namespace Pigmemento.Api.Migrations
 
             modelBuilder.Entity("Pigmemento.Api.Models.Case", b =>
                 {
-                    b.OwnsOne("Pigmemento.Api.Models.Case.Patient#Pigmemento.Api.Models.Patient", "Patient", b1 =>
+                    b.OwnsOne("Pigmemento.Api.Models.Patient", "Patient", b1 =>
                         {
                             b1.Property<Guid>("CaseId")
                                 .HasColumnType("uuid");
@@ -257,7 +260,7 @@ namespace Pigmemento.Api.Migrations
 
                             b1.HasKey("CaseId");
 
-                            b1.ToTable("cases", (string)null);
+                            b1.ToTable("cases");
 
                             b1.WithOwner()
                                 .HasForeignKey("CaseId");

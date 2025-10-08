@@ -135,11 +135,15 @@ builder.Services.AddCors(opt =>
 
 var app = builder.Build();
 
-// Auto-migrate
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    // Apply all migrations (creates __EFMigrationsHistory, citext extension, etc.)
     db.Database.Migrate();
+
+    // Seed AFTER the schema is correct
+    AppSeeder.Seed(db);
 }
 
 app.UseCors();

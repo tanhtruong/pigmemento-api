@@ -9,7 +9,7 @@ namespace Pigmemento.Api.Controllers;
 
 
 [ApiController]
-[Route("[controller]")]
+[Route("waitlist")]
 public class WaitlistController : ControllerBase
 {
     private readonly AppDbContext _db;
