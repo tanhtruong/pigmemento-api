@@ -25,7 +25,8 @@ public class RecentAttemptDto {
   public int TimeToAnswerMs { get; set; }
 }
 
-public class DrillsDueDto {
+public class DrillsDueDto
+{
   public int Count { get; set; }
   public DateTime? NextDueAt { get; set; }
 }
