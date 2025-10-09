@@ -12,6 +12,8 @@ using Microsoft.AspNetCore.Identity;
 using Pigmemento.Api.Models;
 using System.Security.Claims;
 
+using Amazon.S3;
+
 Env.Load(); // keep if you use a .env file
 
 var builder = WebApplication.CreateBuilder(args);
@@ -51,6 +53,26 @@ builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton<IJwtTokenService>(_ => new JwtTokenService(jwtOpts));
 // If it expects IOptions<JwtOptions>, use:
 // builder.Services.AddSingleton<IJwtTokenService>(_ => new JwtTokenService(Options.Create(jwtOpts)));
+
+builder.Services.AddSingleton<IAmazonS3>(sp =>
+{
+    var cfg = sp.GetRequiredService<IConfiguration>();
+    var accountId = cfg["STORAGE_ACCOUNT_ID"];
+    var serviceUrl = $"https://{accountId}.r2.cloudflarestorage.com";
+
+    var s3cfg = new AmazonS3Config
+    {
+        ServiceURL = serviceUrl,
+        ForcePathStyle = true,
+        AuthenticationRegion = "auto"
+    };
+
+    return new AmazonS3Client(
+        cfg["STORAGE_ACCESS_KEY_ID"],
+        cfg["STORAGE_SECRET_ACCESS_KEY"],
+        s3cfg
+    );
+});
 
 // --- Authentication / Authorization ---
 builder.Services

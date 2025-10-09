@@ -15,6 +15,7 @@ public class AppDbContext : DbContext
     public DbSet<Case> Cases => Set<Case>();
     public DbSet<Attempt> Attempts => Set<Attempt>();
     public DbSet<TeachingPoint> TeachingPoints => Set<TeachingPoint>();
+    public DbSet<UserCaseStats> UserCaseStats => Set<UserCaseStats>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -147,6 +148,31 @@ public class AppDbContext : DbContext
             .HasForeignKey(t => t.CaseId)
             .HasPrincipalKey(c => c.Id)
             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // --- UserCaseStats ---
+        modelBuilder.Entity<UserCaseStats>(e =>
+        {
+            e.ToTable("user_case_stats");
+            e.HasKey(s => new { s.UserId, s.CaseId });
+
+            e.Property(s => s.CorrectStreak).HasColumnName("correct_streak");
+            e.Property(s => s.LastAttemptAt).HasColumnName("last_attempt_at")
+                .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
+            e.Property(s => s.NextDueAt).HasColumnName("next_due_at")
+                .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
+
+            e.HasOne(s => s.User)
+                .WithMany()
+                .HasForeignKey(s => s.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(s => s.Case)
+                .WithMany()
+                .HasForeignKey(s => s.CaseId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(s => s.NextDueAt);
         });
     }
 }

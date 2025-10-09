@@ -2,11 +2,14 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Pigmemento.Api.Data;
 using Pigmemento.Api.Contracts;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Pigmemento.Api.Controllers;
 
 [ApiController]
 [Route("cases")]
+[Authorize]
+
 public class CasesController : ControllerBase
 {
     private readonly AppDbContext _db;

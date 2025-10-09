@@ -1,11 +1,7 @@
-// ------------------------------------------------------------
-// File: Core/Services/ProgressService.cs
-// ------------------------------------------------------------
 using Microsoft.EntityFrameworkCore;
 using Pigmemento.Api.Data;
 using Pigmemento.Api.Contracts;
 using Pigmemento.Api.Core.Interfaces;
-using Pigmemento.Api.Models;
 
 namespace Pigmemento.Api.Core.Services;
 
@@ -138,17 +134,31 @@ public class ProgressService : IProgressService
 
     public async Task<DrillsDueDto> GetDrillsDueAsync(Guid userId, CancellationToken ct)
     {
-        // Simple placeholder: could use spaced repetition scheduling later
-        var recent = await _db.Attempts
+        var now = DateTime.UtcNow;
+
+        var stats = _db.UserCaseStats
             .AsNoTracking()
-            .Where(a => a.UserId == userId)
-            .OrderByDescending(a => a.CreatedAt)
-            .FirstOrDefaultAsync(ct);
+            .Where(s => s.UserId == userId);
+
+        // Cases with a stats row and due now
+        var dueFromStats = stats.Where(s => s.NextDueAt <= now).Select(s => s.CaseId);
+
+        // Cases with no stats row at all (never attempted) => due now
+        var unattemptedDue =
+            from c in _db.Cases.AsNoTracking()
+            join s in stats on c.Id equals s.CaseId into gj
+            from s in gj.DefaultIfEmpty()
+            where s == null
+            select c.Id;
+
+        var dueCount = await dueFromStats.CountAsync(ct) + await unattemptedDue.CountAsync(ct);
+
+        DateTime? nextDueAt = dueCount > 0 ? now : await stats.MinAsync(s => (DateTime?)s.NextDueAt, ct);
 
         return new DrillsDueDto
         {
-            Count = 5,
-            NextDueAt = recent?.CreatedAt.AddDays(1)
+            Count = dueCount,
+            NextDueAt = nextDueAt
         };
     }
 }

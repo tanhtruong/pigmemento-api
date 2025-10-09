@@ -6,7 +6,7 @@ using Pigmemento.Api.Auth.Core;
 namespace Pigmemento.Api.Auth.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("auth")]
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _auth;
