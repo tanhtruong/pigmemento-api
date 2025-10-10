@@ -4,8 +4,8 @@ public class Case
 {
     public Guid Id { get; set; }
     public string ImageUrl { get; set; } = default!;
-    public string Label { get; set; } = default!; // "benign" | "malignant"
-    public string Difficulty { get; set; } = default!; // "easy" | "med" | "hard"
+    public string Label { get; set; } = "unknown"; // "benign" | "malignant" | "unknown"
+    public string Difficulty { get; set; } = "med"!; // "easy" | "med" | "hard"
     public string? Metadata { get; set; }
 
     public Patient Patient { get; set; } = new();

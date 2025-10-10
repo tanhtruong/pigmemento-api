@@ -15,14 +15,32 @@ public class StorageService : IStorageService
     public StorageService(IAmazonS3 s3, IConfiguration config)
     {
         _s3 = s3;
-        var cfg = config.GetSection("Storage");
-        _bucket = cfg["Bucket"]!;
-        _publicBaseUrl = cfg["PublicBaseUrl"];
-        _useSignedUrls = bool.TryParse(cfg["UseSignedUrls"], out var b) && b;
-        _signedUrlMinutes = int.TryParse(cfg["SignedUrlMinutes"], out var m) ? m : 15;
+
+        // Try both "Storage" section and flat env vars
+        var section = config.GetSection("Storage");
+
+        _bucket =
+            section["Bucket"]
+            ?? config["STORAGE_BUCKET"]
+            ?? throw new InvalidOperationException("Missing STORAGE_BUCKET or Storage:Bucket");
+
+        _publicBaseUrl =
+            section["PublicBaseUrl"]
+            ?? config["STORAGE_PUBLIC_BASE_URL"];
+
+        _useSignedUrls =
+            (bool.TryParse(section["UseSignedUrls"], out var s1) && s1)
+            || (bool.TryParse(config["STORAGE_USE_SIGNED_URLS"], out var s2) && s2);
+
+        _signedUrlMinutes =
+            int.TryParse(section["SignedUrlMinutes"], out var m1)
+                ? m1
+                : int.TryParse(config["STORAGE_SIGNED_URL_MINUTES"], out var m2)
+                    ? m2
+                    : 15;
     }
 
-    public async Task<string> UploadAsync(string key, Stream content, string contentType)
+    public async Task<string> UploadAsync(string key, Stream content, string contentType, long? contentLength = null)
     {
         var put = new PutObjectRequest
         {
@@ -30,11 +48,13 @@ public class StorageService : IStorageService
             Key = key,
             InputStream = content,
             ContentType = contentType
-            // For public buckets, ACLs are typically ignored by R2; use bucket policy/custom domain instead.
-            // CannedACL = S3CannedACL.PublicRead
         };
-        
-        put.Headers.CacheControl = "public, max-age=31536000, immutable";
+
+        if (contentLength.HasValue)
+            put.Headers.ContentLength = contentLength.Value; // avoids chunked mode
+
+        // (Optional caching)
+        // put.Headers.CacheControl = "public, max-age=31536000, immutable";
 
         await _s3.PutObjectAsync(put);
         return GetReadableUrl(key);

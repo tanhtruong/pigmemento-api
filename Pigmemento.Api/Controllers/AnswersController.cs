@@ -99,10 +99,11 @@ public class AnswersController : ControllerBase
         await _db.SaveChangesAsync(ct);
 
         // 6) Return minimal feedback payload
-        var response = new AnswerResponseDto(
+        var response = new AnswerListItemDto(
             attempt.Id,
-            attempt.Correct,
+            attempt.CaseId,
             truth,
+            attempt.Correct,
             attempt.TimeToAnswerMs,
             attempt.CreatedAt
         );

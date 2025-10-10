@@ -7,8 +7,9 @@
 
   <ItemGroup>
     <!-- Remove this if you use Swashbuckle; otherwise keep it at 8.x -->
-    <PackageReference Include="AWSSDK.S3" Version="4.0.7.7" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.300.0" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <PackageReference Include="CsvHelper" Version="33.1.0" />
     <PackageReference Include="DotNetEnv" Version="3.1.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.8" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.8" />

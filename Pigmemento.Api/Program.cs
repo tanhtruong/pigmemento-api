@@ -13,6 +13,7 @@ using Pigmemento.Api.Models;
 using System.Security.Claims;
 
 using Amazon.S3;
+using Pigmemento.Api.Core.Services;
 
 Env.Load(); // keep if you use a .env file
 
@@ -64,7 +65,10 @@ builder.Services.AddSingleton<IAmazonS3>(sp =>
     {
         ServiceURL = serviceUrl,
         ForcePathStyle = true,
-        AuthenticationRegion = "auto"
+        AuthenticationRegion = "auto",
+        // UseChunkEncoding = false,      // <-- key line for R2
+        // Optional: helps some S3-compatible stores
+        // DisablePayloadSigning = true
     };
 
     return new AmazonS3Client(
@@ -73,6 +77,8 @@ builder.Services.AddSingleton<IAmazonS3>(sp =>
         s3cfg
     );
 });
+
+builder.Services.AddSingleton<StorageService>(); 
 
 // --- Authentication / Authorization ---
 builder.Services
