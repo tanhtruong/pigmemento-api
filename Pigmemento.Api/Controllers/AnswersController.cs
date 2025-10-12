@@ -6,6 +6,7 @@ using Pigmemento.Api.Data;
 using Pigmemento.Api.Models;
 using Pigmemento.Api.Contracts;
 using Pigmemento.Api.Core.Helpers;
+using Pigmemento.Api.Core.Contants;
 
 namespace Pigmemento.Api.Controllers;
 
@@ -42,9 +43,9 @@ public class AnswersController : ControllerBase
             .Where(a => a.UserId == userId && a.CreatedAt >= today)
             .CountAsync();
 
-        if (countToday >= 1)
+        if (countToday >= 10)
         {
-            return BadRequest(new { error = "Daily limit of 1 attempt reached." });
+            return BadRequest(new { error = $"Daily limit of {Limits.DailyLimit} {(Limits.DailyLimit == 1 ? "attempt" : "attempts")} reached." });
         }
 
         // 3) Normalize input & compute correctness

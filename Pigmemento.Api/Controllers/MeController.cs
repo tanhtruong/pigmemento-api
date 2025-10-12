@@ -5,6 +5,7 @@ using Pigmemento.Api.Auth.Core;
 using Pigmemento.Api.Contracts;
 using Pigmemento.Api.Core.Interfaces;
 using Pigmemento.Api.Data;
+using Pigmemento.Api.Core.Contants;
 
 namespace Pigmemento.Api.Controllers;
 
@@ -15,8 +16,6 @@ public class MeController : ControllerBase
 {
     private readonly IProgressService _progressService;
     private readonly AppDbContext _db;
-
-    private const int DailyLimit = 10;
 
     public MeController(IProgressService progressService, AppDbContext db)
     {
@@ -56,7 +55,7 @@ public class MeController : ControllerBase
     /// tzOffsetMinutes is the user's offset from UTC in minutes (e.g., CET summer is +120).
     /// Defaults to 0 (UTC) if omitted.
     /// </summary>
-    [HttpGet("me/attempts/today")]
+    [HttpGet("attempts/today")]
     public async Task<ActionResult<AttemptsTodayDto>> GetAttemptsToday([FromQuery] int? tzOffsetMinutes)
     {
         var userId = User.GetUserId();
@@ -79,11 +78,11 @@ public class MeController : ControllerBase
             .Where(a => a.UserId == userId && a.CreatedAt >= startUtc && a.CreatedAt < endUtc)
             .CountAsync();
 
-        var remaining = Math.Max(0, DailyLimit - used);
+        var remaining = Math.Max(0, Limits.DailyLimit - used);
 
         return Ok(new AttemptsTodayDto
         {
-            Limit = DailyLimit,
+            Limit = Limits.DailyLimit,
             Used = used,
             Remaining = remaining,
             ResetAtLocal = nextLocalMidnight.ToString("o"),
