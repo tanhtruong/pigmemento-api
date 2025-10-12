@@ -87,6 +87,8 @@ public class AppDbContext : DbContext
             e.Property(c => c.Id).ValueGeneratedOnAdd();
             e.Property(c => c.ImageUrl).IsRequired().HasColumnName("image_url");
             e.Property(c => c.Label).IsRequired().HasMaxLength(16).HasColumnName("label");
+            e.Property(c => c.Diagnosis2).HasMaxLength(64).HasColumnName("diagnosis_2");
+            e.Property(c => c.Diagnosis3).HasMaxLength(64).HasColumnName("diagnosis_3");
             e.Property(c => c.Difficulty).IsRequired().HasMaxLength(8).HasColumnName("difficulty");
             e.Property(c => c.Metadata).HasColumnName("metadata");
 

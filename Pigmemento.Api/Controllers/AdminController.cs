@@ -35,6 +35,23 @@ public class AdminImportController : ControllerBase
         if (csv is null || uploadedJsonl is null)
             return BadRequest("Both 'csv' and 'uploadedJsonl' files are required.");
 
+        static string NormalizeDifficulty(string s)
+        {
+            // Accept easy|medium|hard and map to easy|med|hard (your model constraint)
+            return s.Trim().ToLowerInvariant() switch
+            {
+                "easy" => "easy",
+                "medium" => "med",
+                "med" => "med",
+                "hard" => "hard",
+                _ => "med"
+            };
+        }
+
+        static string? NullIfWhite(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+        var normalizedDifficulty = NormalizeDifficulty(defaultDifficulty);
+
         // Build URL map (ISIC_ID -> URL) from uploaded.jsonl results
         var urlMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         using (var sr = new StreamReader(uploadedJsonl.OpenReadStream()))
@@ -49,14 +66,18 @@ public class AdminImportController : ControllerBase
                 var url = root.TryGetProperty("url", out var u) ? u.GetString() : null;
                 var key = root.TryGetProperty("key", out var k) ? k.GetString() : null;
 
-                // Derive ISIC id from key or url; expect filenames like ISIC_00xxxxx.jpg
                 var filename = key ?? url;
                 if (string.IsNullOrWhiteSpace(filename)) continue;
+
                 var justName = System.IO.Path.GetFileNameWithoutExtension(filename);
-                // Normalize to e.g. ISIC_0024306
+
                 if (!string.IsNullOrWhiteSpace(justName) && url is not null)
                 {
-                    urlMap[justName.ToUpperInvariant()] = url;
+                    // Store both with and without "ISIC_" to maximize match chance
+                    var upper = justName.ToUpperInvariant();
+                    urlMap[upper] = url;
+                    if (!upper.StartsWith("ISIC_"))
+                        urlMap["ISIC_" + upper] = url;
                 }
             }
         }
@@ -84,14 +105,17 @@ public class AdminImportController : ControllerBase
             var lookup = isicId.ToUpperInvariant();
             if (!urlMap.TryGetValue(lookup, out var imageUrl))
             {
-                // Some CSVs don't include the "ISIC_" prefix in isic_id; try adding it
                 if (!lookup.StartsWith("ISIC_"))
                     urlMap.TryGetValue("ISIC_" + lookup, out imageUrl);
             }
             if (string.IsNullOrWhiteSpace(imageUrl)) continue;
 
-            var dx = d.TryGetValue("diagnosis_1", out var vDx) ? vDx?.ToString() : null;
-            string label = (dx?.Equals("Malignant", StringComparison.OrdinalIgnoreCase) ?? false)
+            var dx1 = d.TryGetValue("diagnosis_1", out var vDx1) ? vDx1?.ToString() : null;
+            var dx2 = d.TryGetValue("diagnosis_2", out var vDx2) ? vDx2?.ToString() : null;
+            var dx3 = d.TryGetValue("diagnosis_3", out var vDx3) ? vDx3?.ToString() : null;
+
+            // Label: keep your binary mapping (malignant vs benign) based on diagnosis_1
+            string label = (dx1?.Equals("Malignant", StringComparison.OrdinalIgnoreCase) ?? false)
                 ? "malignant" : "benign";
 
             int? age = null;
@@ -100,17 +124,32 @@ public class AdminImportController : ControllerBase
 
             var site = d.TryGetValue("anatom_site_general", out var vSite) ? vSite?.ToString() : null;
 
+            // Optional extras if present in your CSV
+            var sex = d.TryGetValue("sex", out var vSex) ? vSex?.ToString() : null;
+            var fitz = d.TryGetValue("fitzpatrick_skin_type", out var vFtz) ? vFtz?.ToString() : null;
+
             var entity = new Case
             {
                 ImageUrl = imageUrl,
                 Label = label,
-                Difficulty = defaultDifficulty,
-                Patient = new Patient { Age = age, Site = site },
+                Difficulty = normalizedDifficulty,
+                Diagnosis2 = NullIfWhite(dx2),
+                Diagnosis3 = NullIfWhite(dx3),
+                Patient = new Patient
+                {
+                    Age = age,
+                    Site = NullIfWhite(site),
+                    Sex = NullIfWhite(sex),
+                    FitzpatrickType = NullIfWhite(fitz)
+                },
+                // Keep a rich metadata blob for transparency/debugging
                 Metadata = System.Text.Json.JsonSerializer.Serialize(new
                 {
                     source = "ISIC",
                     isic_id = isicId,
-                    diagnosis_1 = dx
+                    diagnosis_1 = dx1,
+                    diagnosis_2 = dx2,
+                    diagnosis_3 = dx3
                 })
             };
 

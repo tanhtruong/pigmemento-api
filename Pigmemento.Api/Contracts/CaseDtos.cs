@@ -26,6 +26,8 @@ public record CaseDetailDto(
     Guid Id,
     string ImageUrl,
     string Label,        // "benign" | "malignant"
+    string? Diagnosis2,
+    string? Diagnosis3,
     string Difficulty,   // "easy" | "med" | "hard"
     PatientDto Patient,
     string? Metadata,

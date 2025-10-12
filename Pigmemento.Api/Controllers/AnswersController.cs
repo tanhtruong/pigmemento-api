@@ -35,6 +35,18 @@ public class AnswersController : ControllerBase
         if (string.IsNullOrWhiteSpace(userIdStr) || !Guid.TryParse(userIdStr, out var userId))
             return Forbid();
 
+        var today = DateTime.UtcNow.Date;
+
+        // Count today's attempts
+        var countToday = await _db.Attempts
+            .Where(a => a.UserId == userId && a.CreatedAt >= today)
+            .CountAsync();
+
+        if (countToday >= 1)
+        {
+            return BadRequest(new { error = "Daily limit of 1 attempt reached." });
+        }
+
         // 3) Normalize input & compute correctness
         var answerNorm = dto.Answer?.Trim().ToLowerInvariant();
         if (answerNorm is not ("benign" or "malignant"))
@@ -126,7 +138,7 @@ public class AnswersController : ControllerBase
         limit = Math.Clamp(limit, 1, 200);
 
         // decode cursor (CreatedAt ticks + Id), for keyset pagination
-        (DateTime? afterCreatedAt, Guid? afterId) =  CursorHelper.TryDecodeCursor(cursor);
+        (DateTime? afterCreatedAt, Guid? afterId) = CursorHelper.TryDecodeCursor(cursor);
 
         // base query
         var q = _db.Attempts

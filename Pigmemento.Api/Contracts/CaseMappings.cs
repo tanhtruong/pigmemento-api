@@ -25,6 +25,8 @@ public static class CaseMappings
             c.Id,
             c.ImageUrl,
             c.Label,
+            c.Diagnosis2,
+            c.Diagnosis3,
             c.Difficulty,
             new PatientDto(
                 c.Patient.Age,
