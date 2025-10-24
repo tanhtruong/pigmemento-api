@@ -14,6 +14,7 @@ using System.Security.Claims;
 
 using Amazon.S3;
 using Pigmemento.Api.Core.Services;
+using Pigmemento.Api.Core.Interfaces;
 
 Env.Load(); // keep if you use a .env file
 
@@ -26,10 +27,10 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
 // ---------- JWT from ENV (single source of truth) ----------
-var jwtKey            = Environment.GetEnvironmentVariable("JWT__Key");
-var jwtIssuer         = Environment.GetEnvironmentVariable("JWT__Issuer") ?? "";
-var jwtAudience       = Environment.GetEnvironmentVariable("JWT__Audience") ?? "";
-var jwtExpireMinutes  = int.TryParse(Environment.GetEnvironmentVariable("JWT__ExpirationMinutes"), out var m) ? m : 480;
+var jwtKey = Environment.GetEnvironmentVariable("JWT__Key");
+var jwtIssuer = Environment.GetEnvironmentVariable("JWT__Issuer") ?? "";
+var jwtAudience = Environment.GetEnvironmentVariable("JWT__Audience") ?? "";
+var jwtExpireMinutes = int.TryParse(Environment.GetEnvironmentVariable("JWT__ExpirationMinutes"), out var m) ? m : 480;
 
 // Validate early
 if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
@@ -47,8 +48,9 @@ var jwtOpts = new JwtOptions
 
 // Auth services
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<Pigmemento.Api.Core.Interfaces.IProgressService,
-                           Pigmemento.Api.Core.Services.ProgressService>();
+builder.Services.AddScoped<IProgressService, ProgressService>();
+builder.Services.AddScoped<ISpacedRepetitionService, SpacedRepetitionService>();
+
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 // If your JwtTokenService expects JwtOptions directly:
 builder.Services.AddSingleton<IJwtTokenService>(_ => new JwtTokenService(jwtOpts));
@@ -78,7 +80,7 @@ builder.Services.AddSingleton<IAmazonS3>(sp =>
     );
 });
 
-builder.Services.AddSingleton<StorageService>(); 
+builder.Services.AddSingleton<StorageService>();
 
 // --- Authentication / Authorization ---
 builder.Services

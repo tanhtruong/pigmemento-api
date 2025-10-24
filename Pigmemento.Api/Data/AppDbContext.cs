@@ -158,12 +158,44 @@ public class AppDbContext : DbContext
             e.ToTable("user_case_stats");
             e.HasKey(s => new { s.UserId, s.CaseId });
 
+            // --- Columns / names ---
             e.Property(s => s.CorrectStreak).HasColumnName("correct_streak");
-            e.Property(s => s.LastAttemptAt).HasColumnName("last_attempt_at")
-                .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
-            e.Property(s => s.NextDueAt).HasColumnName("next_due_at")
-                .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
 
+            // Prefer timestamptz for true-UTC storage
+            e.Property(s => s.LastAttemptAt)
+                .HasColumnName("last_attempt_at")
+                .HasColumnType("timestamp with time zone")
+                .HasDefaultValueSql("now()")
+                .IsRequired(false);                // nullable in the new model
+
+            e.Property(s => s.NextDueAt)
+                .HasColumnName("next_due_at")
+                .HasColumnType("timestamp with time zone")
+                .HasDefaultValueSql("now()");
+
+            e.Property(s => s.EaseFactor)
+                .HasColumnName("ease_factor")
+                .HasDefaultValue(2.5);
+
+            e.Property(s => s.IntervalDays)
+                .HasColumnName("interval_days")
+                .HasDefaultValue(0);
+
+            e.Property(s => s.LastResult)
+                .HasColumnName("last_result");     // bool? (nullable)
+
+            e.Property(s => s.LastLatencyMs)
+                .HasColumnName("last_latency_ms"); // bigint? (nullable)
+
+            e.Property(s => s.LastSeenAt)
+                .HasColumnName("last_seen_at")
+                .HasColumnType("timestamp with time zone");
+
+            e.Property(s => s.RecentlyWrongAt)
+                .HasColumnName("recently_wrong_at")
+                .HasColumnType("timestamp with time zone");
+
+            // --- Relationships ---
             e.HasOne(s => s.User)
                 .WithMany()
                 .HasForeignKey(s => s.UserId)
@@ -174,7 +206,47 @@ public class AppDbContext : DbContext
                 .HasForeignKey(s => s.CaseId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            e.HasIndex(s => s.NextDueAt);
+            // --- Indexes for feed queries ---
+            e.HasIndex(s => s.NextDueAt).HasDatabaseName("ix_user_case_stats_next_due_at");
+
+            // Fast “recently wrong” bucket (only rows that are set)
+            e.HasIndex(s => s.RecentlyWrongAt)
+                .HasDatabaseName("ix_user_case_stats_recently_wrong_at")
+                .HasFilter("\"recently_wrong_at\" IS NOT NULL");
+
+            // Cooldown / reservation lookups
+            e.HasIndex(s => s.LastSeenAt)
+                .HasDatabaseName("ix_user_case_stats_last_seen_at")
+                .HasFilter("\"last_seen_at\" IS NOT NULL");
+
+            // Helpful compound index if you often filter by (user, due)
+            e.HasIndex(s => new { s.UserId, s.NextDueAt })
+                .HasDatabaseName("ix_user_case_stats_user_due");
+
+            // --- Concurrency token ---
+            // Preferred for Postgres: use the system xmin column (no extra storage).
+            // Requires package Npgsql.EntityFrameworkCore.PostgreSQL >= 6
+            // e.UseXminAsConcurrencyToken();
+
+            // If you already added a RowVersion bytea property instead, use:
+            e.Property(s => s.RowVersion)
+            .IsRowVersion()
+            .IsConcurrencyToken()
+            .ValueGeneratedOnAddOrUpdate();
         });
+
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<RefreshToken>()
+            .HasIndex(rt => rt.TokenHash)
+            .IsUnique();
+
+        modelBuilder.Entity<RefreshToken>()
+            .HasOne(rt => rt.ReplacedBy)
+            .WithOne()
+            .HasForeignKey<RefreshToken>(rt => rt.ReplacedById)
+            .OnDelete(DeleteBehavior.Restrict);
     }
+
+
 }

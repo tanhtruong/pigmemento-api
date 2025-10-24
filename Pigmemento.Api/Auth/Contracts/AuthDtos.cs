@@ -20,3 +20,14 @@ public record AuthResponse(
     string AccessToken,
     DateTime ExpiresUtc
 );
+
+// public record AuthResponse(
+//     Guid UserId,
+//     string Email,
+//     string? Name,
+//     string AccessToken,
+//     DateTime AccessTokenExpiresAt,
+//     string RefreshToken,
+//     DateTime RefreshTokenExpiresAt);
+
+// public record RefreshRequest(string RefreshToken);

@@ -12,6 +12,7 @@ namespace Pigmemento.Api.Controllers;
 
 [ApiController]
 [Route("admin")]
+[Authorize(Roles = "admin")]
 public class AdminImportController : ControllerBase
 {
     private readonly AppDbContext _db;

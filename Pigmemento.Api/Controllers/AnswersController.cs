@@ -7,6 +7,8 @@ using Pigmemento.Api.Models;
 using Pigmemento.Api.Contracts;
 using Pigmemento.Api.Core.Helpers;
 using Pigmemento.Api.Core.Contants;
+using Pigmemento.Api.Core.Interfaces;
+using Pigmemento.Api.Auth.Core;
 
 namespace Pigmemento.Api.Controllers;
 
@@ -15,13 +17,22 @@ namespace Pigmemento.Api.Controllers;
 [Authorize] // (flip to [AllowAnonymous] for MVP if needed)
 public class AnswersController : ControllerBase
 {
+    private readonly ISpacedRepetitionService _spacedRepService;
     private readonly AppDbContext _db;
-    public AnswersController(AppDbContext db) => _db = db;
+
+    public AnswersController(AppDbContext db, ISpacedRepetitionService spacedRepService)
+    {
+        _db = db;
+        _spacedRepService = spacedRepService;
+    }
 
     // POST /answers
     [HttpPost]
     public async Task<ActionResult<AnswerResponseDto>> Post([FromBody] AnswerCreateDto dto, CancellationToken ct)
     {
+        var role = User.GetUserRole();
+        if (role is null) return Forbid();
+
         // 1) Validate case exists & get truth label
         var truth = await _db.Cases
             .Where(c => c.Id == dto.CaseId)
@@ -41,11 +52,12 @@ public class AnswersController : ControllerBase
         // Count today's attempts
         var countToday = await _db.Attempts
             .Where(a => a.UserId == userId && a.CreatedAt >= today)
-            .CountAsync();
+            .CountAsync(ct);
 
-        if (countToday >= 10)
+        if (countToday >= Limits.DailyLimit && role is not "admin")
         {
-            return BadRequest(new { error = $"Daily limit of {Limits.DailyLimit} {(Limits.DailyLimit == 1 ? "attempt" : "attempts")} reached." });
+            var noun = Limits.DailyLimit == 1 ? "attempt" : "attempts";
+            return BadRequest(new { error = $"Daily limit of {Limits.DailyLimit} {noun} reached." });
         }
 
         // 3) Normalize input & compute correctness
@@ -69,49 +81,16 @@ public class AnswersController : ControllerBase
         _db.Attempts.Add(attempt);
         await _db.SaveChangesAsync(ct);
 
-        // 5) Upsert UserCaseStats (keeps drills fast)
-        //    Simple spacing schedule by correct streak:
-        //    incorrect -> 0 days (due now)
-        //    streak 1 -> 1 day, 2 -> 4 days, 3 -> 7 days, >=4 -> 14 days
-        var stats = await _db.UserCaseStats
-            .FirstOrDefaultAsync(s => s.UserId == userId && s.CaseId == dto.CaseId, ct);
+        // 5) Spaced repetition update (delegate to service)  <<<<<<<<<<
+        await _spacedRepService.UpdateUserCaseStatsAsync(
+            userId: userId,
+            caseId: dto.CaseId,
+            correct: correct,
+            latencyMs: attempt.TimeToAnswerMs,
+            ct: ct
+        );
 
-        if (stats is null)
-        {
-            var streak = correct ? 1 : 0;
-            var days = correct ? 1 : 0;
-
-            stats = new UserCaseStats
-            {
-                UserId = userId,
-                CaseId = dto.CaseId,
-                CorrectStreak = streak,
-                LastAttemptAt = attempt.CreatedAt,
-                NextDueAt = attempt.CreatedAt.AddDays(days)
-            };
-            _db.UserCaseStats.Add(stats);
-        }
-        else
-        {
-            stats.CorrectStreak = correct ? stats.CorrectStreak + 1 : 0;
-            stats.LastAttemptAt = attempt.CreatedAt;
-
-            int days = correct switch
-            {
-                false => 0,
-                true when stats.CorrectStreak >= 4 => 14,
-                true when stats.CorrectStreak == 3 => 7,
-                true when stats.CorrectStreak == 2 => 4,
-                _ => 1
-            };
-
-            stats.NextDueAt = attempt.CreatedAt.AddDays(days);
-            // no need to _db.Update(stats); tracked entity is modified
-        }
-
-        await _db.SaveChangesAsync(ct);
-
-        // 6) Return minimal feedback payload
+        // 6) Return minimal feedback payload (truth is OK here because this is the feedback flow)
         var response = new AnswerListItemDto(
             attempt.Id,
             attempt.CaseId,

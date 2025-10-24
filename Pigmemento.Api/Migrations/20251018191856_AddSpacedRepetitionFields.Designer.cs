@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pigmemento.Api.Data;
@@ -11,9 +12,11 @@ using Pigmemento.Api.Data;
 namespace Pigmemento.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251018191856_AddSpacedRepetitionFields")]
+    partial class AddSpacedRepetitionFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -112,47 +115,6 @@ namespace Pigmemento.Api.Migrations
                     b.HasIndex("Label");
 
                     b.ToTable("cases", (string)null);
-                });
-
-            modelBuilder.Entity("Pigmemento.Api.Models.RefreshToken", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("ExpiresAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("ReplacedById")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("RevokedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("RevokedReason")
-                        .HasColumnType("text");
-
-                    b.Property<string>("TokenHash")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ReplacedById")
-                        .IsUnique();
-
-                    b.HasIndex("TokenHash")
-                        .IsUnique();
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("RefreshToken");
                 });
 
             modelBuilder.Entity("Pigmemento.Api.Models.TeachingPoint", b =>
@@ -395,24 +357,6 @@ namespace Pigmemento.Api.Migrations
 
                     b.Navigation("Patient")
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("Pigmemento.Api.Models.RefreshToken", b =>
-                {
-                    b.HasOne("Pigmemento.Api.Models.RefreshToken", "ReplacedBy")
-                        .WithOne()
-                        .HasForeignKey("Pigmemento.Api.Models.RefreshToken", "ReplacedById")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("Pigmemento.Api.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ReplacedBy");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Pigmemento.Api.Models.TeachingPoint", b =>

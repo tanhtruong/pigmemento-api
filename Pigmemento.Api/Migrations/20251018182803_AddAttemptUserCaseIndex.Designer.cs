@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pigmemento.Api.Data;
@@ -11,9 +12,11 @@ using Pigmemento.Api.Data;
 namespace Pigmemento.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251018182803_AddAttemptUserCaseIndex")]
+    partial class AddAttemptUserCaseIndex
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -114,47 +117,6 @@ namespace Pigmemento.Api.Migrations
                     b.ToTable("cases", (string)null);
                 });
 
-            modelBuilder.Entity("Pigmemento.Api.Models.RefreshToken", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("ExpiresAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("ReplacedById")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("RevokedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("RevokedReason")
-                        .HasColumnType("text");
-
-                    b.Property<string>("TokenHash")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ReplacedById")
-                        .IsUnique();
-
-                    b.HasIndex("TokenHash")
-                        .IsUnique();
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("RefreshToken");
-                });
-
             modelBuilder.Entity("Pigmemento.Api.Models.TeachingPoint", b =>
                 {
                     b.Property<Guid>("Id")
@@ -244,69 +206,23 @@ namespace Pigmemento.Api.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("correct_streak");
 
-                    b.Property<double>("EaseFactor")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("double precision")
-                        .HasDefaultValue(2.5)
-                        .HasColumnName("ease_factor");
-
-                    b.Property<int>("IntervalDays")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
-                        .HasColumnName("interval_days");
-
-                    b.Property<DateTime?>("LastAttemptAt")
+                    b.Property<DateTime>("LastAttemptAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_attempt_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<long?>("LastLatencyMs")
-                        .HasColumnType("bigint")
-                        .HasColumnName("last_latency_ms");
-
-                    b.Property<bool?>("LastResult")
-                        .HasColumnType("boolean")
-                        .HasColumnName("last_result");
-
-                    b.Property<DateTime?>("LastSeenAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_seen_at");
+                        .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
 
                     b.Property<DateTime>("NextDueAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("next_due_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<DateTime?>("RecentlyWrongAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("recently_wrong_at");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea");
+                        .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
 
                     b.HasKey("UserId", "CaseId");
 
                     b.HasIndex("CaseId");
 
-                    b.HasIndex("LastSeenAt")
-                        .HasDatabaseName("ix_user_case_stats_last_seen_at")
-                        .HasFilter("\"last_seen_at\" IS NOT NULL");
-
-                    b.HasIndex("NextDueAt")
-                        .HasDatabaseName("ix_user_case_stats_next_due_at");
-
-                    b.HasIndex("RecentlyWrongAt")
-                        .HasDatabaseName("ix_user_case_stats_recently_wrong_at")
-                        .HasFilter("\"recently_wrong_at\" IS NOT NULL");
-
-                    b.HasIndex("UserId", "NextDueAt")
-                        .HasDatabaseName("ix_user_case_stats_user_due");
+                    b.HasIndex("NextDueAt");
 
                     b.ToTable("user_case_stats", (string)null);
                 });
@@ -395,24 +311,6 @@ namespace Pigmemento.Api.Migrations
 
                     b.Navigation("Patient")
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("Pigmemento.Api.Models.RefreshToken", b =>
-                {
-                    b.HasOne("Pigmemento.Api.Models.RefreshToken", "ReplacedBy")
-                        .WithOne()
-                        .HasForeignKey("Pigmemento.Api.Models.RefreshToken", "ReplacedById")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("Pigmemento.Api.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ReplacedBy");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Pigmemento.Api.Models.TeachingPoint", b =>

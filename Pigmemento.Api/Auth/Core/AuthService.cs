@@ -56,11 +56,15 @@ public class AuthService : IAuthService
         if (user is null)
             throw new UnauthorizedAccessException("Invalid email or password.");
 
+        user.LastLoginUtc = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+
         var result = _hasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
         if (result == PasswordVerificationResult.Failed)
             throw new UnauthorizedAccessException("Invalid email or password.");
 
         var (token, exp) = _jwt.CreateAccessToken(user);
+
         return new AuthResponse(user.Id, user.Email, user.Name, token, exp);
     }
 }

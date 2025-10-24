@@ -59,6 +59,7 @@ public class MeController : ControllerBase
     public async Task<ActionResult<AttemptsTodayDto>> GetAttemptsToday([FromQuery] int? tzOffsetMinutes)
     {
         var userId = User.GetUserId();
+        var role = User.GetUserRole();
 
         // Client-provided offset (e.g., Europe/Copenhagen is typically +120 summer, +60 winter)
         var offset = TimeSpan.FromMinutes(tzOffsetMinutes ?? 0);
@@ -78,11 +79,11 @@ public class MeController : ControllerBase
             .Where(a => a.UserId == userId && a.CreatedAt >= startUtc && a.CreatedAt < endUtc)
             .CountAsync();
 
-        var remaining = Math.Max(0, Limits.DailyLimit - used);
+        var remaining = role == "admin" ? 100 : Math.Max(0, Limits.DailyLimit - used);
 
         return Ok(new AttemptsTodayDto
         {
-            Limit = Limits.DailyLimit,
+            Limit = role == "admin" ? 100 : Limits.DailyLimit,
             Used = used,
             Remaining = remaining,
             ResetAtLocal = nextLocalMidnight.ToString("o"),

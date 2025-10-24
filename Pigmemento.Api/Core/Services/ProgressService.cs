@@ -135,25 +135,36 @@ public class ProgressService : IProgressService
     public async Task<DrillsDueDto> GetDrillsDueAsync(Guid userId, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
+        var startOfDay = now.Date; // midnight UTC — adjust if you later want local time
 
         var stats = _db.UserCaseStats
             .AsNoTracking()
             .Where(s => s.UserId == userId);
 
-        // Cases with a stats row and due now
-        var dueFromStats = stats.Where(s => s.NextDueAt <= now).Select(s => s.CaseId);
+        // Find caseIds attempted today
+        var attemptedToday = _db.Attempts
+            .AsNoTracking()
+            .Where(a => a.UserId == userId && a.CreatedAt >= startOfDay)
+            .Select(a => a.CaseId);
 
-        // Cases with no stats row at all (never attempted) => due now
+        // Cases with stats and due now, but not attempted today
+        var dueFromStats = stats
+            .Where(s => s.NextDueAt <= now && !attemptedToday.Contains(s.CaseId))
+            .Select(s => s.CaseId);
+
+        // Cases never attempted at all (no stats row) => due now
         var unattemptedDue =
             from c in _db.Cases.AsNoTracking()
             join s in stats on c.Id equals s.CaseId into gj
             from s in gj.DefaultIfEmpty()
-            where s == null
+            where s == null && !attemptedToday.Contains(c.Id)
             select c.Id;
 
         var dueCount = await dueFromStats.CountAsync(ct) + await unattemptedDue.CountAsync(ct);
 
-        DateTime? nextDueAt = dueCount > 0 ? now : await stats.MinAsync(s => (DateTime?)s.NextDueAt, ct);
+        DateTime? nextDueAt = dueCount > 0
+            ? now
+            : await stats.MinAsync(s => (DateTime?)s.NextDueAt, ct);
 
         return new DrillsDueDto
         {
