@@ -2,16 +2,15 @@ namespace Pigmemento.Api.Models;
 
 public class Case
 {
-    public Guid Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
+
     public string ImageUrl { get; set; } = default!;
-    public string Label { get; set; } = "unknown"; // "benign" | "malignant" | "unknown"
-    public string? Diagnosis2 { get; set; }
-    public string? Diagnosis3 { get; set; }
-    public string Difficulty { get; set; } = "med"; // "easy" | "med" | "hard"
-    public string? Metadata { get; set; }
-    public Patient Patient { get; set; } = new();
+    public string Label { get; set; } = default!;
 
+    public string Difficulty { get; set; } = "medium";
+    public int PatientAge { get; set; }
+    public string Site { get; set; } = default!;
+    public string ClinicalNote { get; set; } = default!;
 
-    public ICollection<TeachingPoint> TeachingPoints { get; set; } = [];
-    public ICollection<Attempt> Attempts { get; set; } = [];
+    public List<TeachingPoint> TeachingPoints { get; set; } = new();
 }
