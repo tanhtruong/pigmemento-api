@@ -59,10 +59,6 @@ namespace Pigmemento.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string[]>("AdditionalDiagnoses")
-                        .IsRequired()
-                        .HasColumnType("text[]");
-
                     b.Property<string>("ClinicalNote")
                         .IsRequired()
                         .HasColumnType("text");
@@ -82,19 +78,7 @@ namespace Pigmemento.Api.Migrations
                     b.Property<int>("PatientAge")
                         .HasColumnType("integer");
 
-                    b.Property<string>("PrimaryDiagnosis")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("Site")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("SourceId")
                         .IsRequired()
                         .HasColumnType("text");
 

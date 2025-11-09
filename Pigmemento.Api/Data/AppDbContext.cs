@@ -23,10 +23,6 @@ public class AppDbContext : DbContext
             .HasMany(u => u.Attempts)
             .WithOne(a => a.User)
             .HasForeignKey(a => a.UserId);
-        
-        modelBuilder.Entity<Case>()
-            .Property(c => c.AdditionalDiagnoses)
-            .HasColumnType("text[]");
     }
     
     public override int SaveChanges()
