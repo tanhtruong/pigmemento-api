@@ -5,7 +5,8 @@ public record CaseListItemDto(
     string ImageUrl,
     string Difficulty,
     int PatientAge,
-    string Site
+    string Site,
+    AttemptSummaryDto? LastAttempt // null = unseen
 );
 
 // Used when viewing a single case prior to answering.
@@ -17,3 +18,5 @@ public record CaseDetailDto(
     string Site,
     string ClinicalNote
 );
+
+

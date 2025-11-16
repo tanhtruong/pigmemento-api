@@ -1,5 +1,4 @@
 using System.Text;
-using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -11,10 +10,11 @@ using Pigmemento.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --------------------------------------
-// Load .env variables early
-// --------------------------------------
-Env.Load(); // loads .env from project root
+// In Development, ensure UserSecrets are available (requires <UserSecretsId> in .csproj)
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddUserSecrets<Program>();
+}
 
 // --------------------------------------
 // Services setup
@@ -24,10 +24,10 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // --------------------------------------
-// Database (Npgsql + .env variables)
+// Database (Npgsql + User Secrets / config)
 // --------------------------------------
 var connectionString =
-    Environment.GetEnvironmentVariable("POSTGRES_CONNECTION")
+    builder.Configuration["POSTGRES_CONNECTION"]
     ?? throw new InvalidOperationException("POSTGRES_CONNECTION not set");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -36,14 +36,14 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 });
 
 // --------------------------------------
-// JWT configuration (from .env)
+// JWT configuration (from User Secrets / config)
 // --------------------------------------
 var jwtSettings = new JwtSettings
 {
-    Issuer = Environment.GetEnvironmentVariable("JWT_Issuer") ?? "https://api.pigmemento.app",
-    Audience = Environment.GetEnvironmentVariable("JWT_Audience") ?? "pigmemento-clients",
-    Key = Environment.GetEnvironmentVariable("JWT_Key") ?? throw new InvalidOperationException("JWT_KEY missing"),
-    ExpirationMinutes = int.TryParse(Environment.GetEnvironmentVariable("JWT_ExpirationMinutes"), out var exp)
+    Issuer = builder.Configuration["JWT_Issuer"] ?? "https://api.pigmemento.app",
+    Audience = builder.Configuration["JWT_Audience"] ?? "pigmemento-clients",
+    Key = builder.Configuration["JWT_Key"] ?? throw new InvalidOperationException("JWT_Key missing"),
+    ExpirationMinutes = int.TryParse(builder.Configuration["JWT_ExpirationMinutes"], out var exp)
         ? exp : 480
 };
 
@@ -131,3 +131,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// Needed for AddUserSecrets<T>() in top-level statements
+internal partial class Program { }

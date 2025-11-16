@@ -23,6 +23,16 @@ public class AppDbContext : DbContext
             .HasMany(u => u.Attempts)
             .WithOne(a => a.User)
             .HasForeignKey(a => a.UserId);
+        
+        modelBuilder.Entity<Case>()
+            .Property(c => c.AdditionalDiagnoses)
+            .HasColumnType("text[]");
+        
+        modelBuilder.Entity<TeachingPoint>()
+            .HasOne(tp => tp.Case)
+            .WithMany(c => c.TeachingPoints)
+            .HasForeignKey(tp => tp.CaseId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
     
     public override int SaveChanges()

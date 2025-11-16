@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pigmemento.Api.Data.Seed;
+using Pigmemento.Api.Dtos;
 
 namespace Pigmemento.Api.Controllers;
 
@@ -10,23 +11,23 @@ namespace Pigmemento.Api.Controllers;
 public class AdminCasesController : ControllerBase
 {
     private readonly CaseSeeder _seeder;
-    private readonly IWebHostEnvironment _env;
 
-    public AdminCasesController(CaseSeeder seeder, IWebHostEnvironment env)
+    public AdminCasesController(CaseSeeder seeder)
     {
         _seeder = seeder;
-        _env = env;
     }
 
     /// <summary>
-    /// Import cases from a CSV on the server.
-    /// Default path: Data/Seed/metadata.csv (relative to content root).
+    /// Import cases from an uploaded CSV file.
+    /// Content-Type: multipart/form-data; field name: "file".
     /// </summary>
-    /// POST /admin/cases/import
     [HttpPost("import")]
+    [Consumes("multipart/form-data")]
     [RequestSizeLimit(50_000_000)] // 50 MB, adjust as needed
-    public async Task<ActionResult<object>> ImportCases([FromForm] IFormFile? file)
+    public async Task<ActionResult<object>> ImportCases([FromForm] CaseImportRequest request)
     {
+        var file = request.File;
+        
         if (file == null || file.Length == 0)
         {
             return BadRequest(new
