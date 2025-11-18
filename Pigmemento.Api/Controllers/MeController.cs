@@ -92,9 +92,24 @@ public class MeController : ControllerBase
         if (user == null)
             return NotFound();
 
+        // Scrub PII on user
+        user.Name = null;
+        user.Email = null;
+        user.PasswordHash = null;
+        user.Role = null;
         user.DeletedAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync();
 
+        // Anonymize attempts: keep behavior, drop identity
+        var attempts = await _db.Attempts
+            .Where(a => a.UserId == userId)
+            .ToListAsync();
+
+        foreach (var attempt in attempts)
+        {
+            attempt.UserId = null;
+        }
+        
+        await _db.SaveChangesAsync();
         return NoContent();
     }
 
