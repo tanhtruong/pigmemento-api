@@ -136,9 +136,9 @@ public class CasesController : ControllerBase
 
     // POST /cases/{id}/answer
     [HttpPost("{id:guid}/answer")]
-    public async Task<ActionResult<AnswerResponseDto>> AnswerCase(
+    public async Task<ActionResult<AttemptResponseDto>> AnswerCase(
         Guid id,
-        [FromBody] AnswerRequestDto request)
+        [FromBody] AttemptRequestDto request)
     {
         var userId = User.GetUserId();
 
@@ -167,20 +167,22 @@ public class CasesController : ControllerBase
             UserId = currentUserId,
             ChosenLabel = request.ChosenLabel,
             Correct = correct,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            TimeToAnswerMs = request.TimeToAnswerMs,
         };
 
         _db.Attempts.Add(attempt);
         await _db.SaveChangesAsync();
 
-        var response = new AnswerResponseDto(
+        var response = new AttemptResponseDto(
             correct,
             c.Label,
             c.TeachingPoints
                 .OrderBy(tp => tp.Id)
                 .Select(tp => tp.Text)
                 .ToList(),
-            DisclaimerText
+            DisclaimerText,
+            request.TimeToAnswerMs
         );
 
         return Ok(response);
@@ -261,7 +263,8 @@ public class CasesController : ControllerBase
                     lastAttempt.Correct,
                     lastAttempt.ChosenLabel,
                     lastAttempt.CreatedAt,
-                    attemptGroup.Count()
+                    attemptGroup.Count(),
+                    lastAttempt.TimeToAnswerMs
                 )
             );
         var items = await query.ToListAsync(ct);
@@ -305,7 +308,8 @@ public class CasesController : ControllerBase
                 .OrderBy(tp => tp.Id)
                 .Select(tp => tp.Text)
                 .ToList(),
-            Disclaimer: DisclaimerText // same constant you use in AnswerCase
+            Disclaimer: DisclaimerText, // same constant you use in AnswerCase
+            latestAttempt.TimeToAnswerMs
         );
 
         return Ok(dto);

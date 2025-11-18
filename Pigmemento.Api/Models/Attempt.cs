@@ -12,5 +12,8 @@ public class Attempt
     
     public string ChosenLabel { get; set; } = default!;
     public bool Correct { get; set; }
+    
+    public int TimeToAnswerMs { get; set; }
+    
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
