@@ -7,7 +7,7 @@ public class Attempt
     public Guid CaseId { get; set; }
     public Case Case { get; set; } = default!;
     
-    public Guid UserId { get; set; }
+    public Guid? UserId { get; set; }
     public User User { get; set; } = default!;
     
     public string ChosenLabel { get; set; } = default!;

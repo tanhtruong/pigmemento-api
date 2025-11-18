@@ -24,6 +24,12 @@ public class AppDbContext : DbContext
             .WithOne(a => a.User)
             .HasForeignKey(a => a.UserId);
         
+        modelBuilder.Entity<Attempt>()
+            .HasOne(a => a.User)
+            .WithMany(u => u.Attempts)
+            .HasForeignKey(a => a.UserId)
+            .OnDelete(DeleteBehavior.SetNull);
+        
         modelBuilder.Entity<Case>()
             .Property(c => c.AdditionalDiagnoses)
             .HasColumnType("text[]");

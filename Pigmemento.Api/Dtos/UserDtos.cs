@@ -12,3 +12,16 @@ public record UserDto(
 public record UpdateUserDto(
     string? Name
 );
+
+public record TrainingStatsDto(
+    int TotalAttempts,
+    int UniqueCasesAttempted,
+    
+    double? Accuracy,
+    double? Sensitivity, // melanoma:    P(pred malignant | true malignant)
+    double? Specificity, // benign:      P(pred benign | true benign)
+    
+    // Optional extras for UI later
+    DateTime? FirstAtttemptAt,
+    DateTime? LastAtttemptAt
+);
