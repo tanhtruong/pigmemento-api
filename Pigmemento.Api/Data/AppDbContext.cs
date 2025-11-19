@@ -24,9 +24,21 @@ public class AppDbContext : DbContext
             .WithOne(a => a.User)
             .HasForeignKey(a => a.UserId);
         
+        modelBuilder.Entity<Attempt>()
+            .HasOne(a => a.User)
+            .WithMany(u => u.Attempts)
+            .HasForeignKey(a => a.UserId)
+            .OnDelete(DeleteBehavior.SetNull);
+        
         modelBuilder.Entity<Case>()
             .Property(c => c.AdditionalDiagnoses)
             .HasColumnType("text[]");
+        
+        modelBuilder.Entity<TeachingPoint>()
+            .HasOne(tp => tp.Case)
+            .WithMany(c => c.TeachingPoints)
+            .HasForeignKey(tp => tp.CaseId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
     
     public override int SaveChanges()

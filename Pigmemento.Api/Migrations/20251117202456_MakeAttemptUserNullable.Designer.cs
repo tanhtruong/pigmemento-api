@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pigmemento.Api.Data;
@@ -11,9 +12,11 @@ using Pigmemento.Api.Data;
 namespace Pigmemento.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251117202456_MakeAttemptUserNullable")]
+    partial class MakeAttemptUserNullable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -41,9 +44,6 @@ namespace Pigmemento.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("TimeToAnswerMs")
-                        .HasColumnType("integer");
-
                     b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
 
@@ -61,6 +61,10 @@ namespace Pigmemento.Api.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string[]>("AdditionalDiagnoses")
+                        .IsRequired()
+                        .HasColumnType("text[]");
 
                     b.Property<string>("ClinicalNote")
                         .IsRequired()
@@ -81,7 +85,19 @@ namespace Pigmemento.Api.Migrations
                     b.Property<int>("PatientAge")
                         .HasColumnType("integer");
 
+                    b.Property<string>("PrimaryDiagnosis")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("Site")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SourceId")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -126,18 +142,22 @@ namespace Pigmemento.Api.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Email")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime?>("LastLoginAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("PasswordHash")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Role")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime>("UpdatedAt")

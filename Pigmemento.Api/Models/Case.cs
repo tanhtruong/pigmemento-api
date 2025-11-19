@@ -11,7 +11,7 @@ public class Case
 
     // Optional: store more detailed diagnoses from 1 to 5
     public string PrimaryDiagnosis { get; set; } = default!;                    // diagnosis_1
-    public string[] AdditionalDiagnoses { get; set; } = Array.Empty<string>();  // 2–5
+    public string?[] AdditionalDiagnoses { get; set; } = Array.Empty<string>();  // 2–5
 
     public string Difficulty { get; set; } = "medium";
     public int PatientAge { get; set; }

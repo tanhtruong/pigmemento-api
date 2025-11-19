@@ -5,6 +5,7 @@ using Pigmemento.Api.Data;
 using Pigmemento.Api.Dtos;
 using System.Security.Claims;
 using Microsoft.IdentityModel.JsonWebTokens;
+using Pigmemento.Api.Auth;
 
 namespace Pigmemento.Api.Controllers;
 
@@ -20,12 +21,15 @@ public class MeController : ControllerBase
         _db = db;
     }
 
+    /// <summary>
+    /// Basic profile info for the authenticated user.
+    /// </summary>
     // GET /me
     [HttpGet]
     public async Task<ActionResult<UserDto>> GetProfile()
     {
-        var userId = GetUserId();
-        if (userId == Guid.Empty)
+        var userId = User.GetUserId();
+        if (userId is null)
             return Unauthorized();
 
         var user = await _db.Users
@@ -49,9 +53,15 @@ public class MeController : ControllerBase
     [HttpPatch]
     public async Task<ActionResult<UserDto>> UpdateProfile([FromBody] UpdateUserDto dto)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
+
+        if (userId is null)
+            return Unauthorized();
+
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId && u.DeletedAt == null);
-        if (user == null) return NotFound();
+
+        if (user == null)
+            return NotFound();
 
         if (!string.IsNullOrWhiteSpace(dto.Name))
             user.Name = dto.Name.Trim();
@@ -72,22 +82,108 @@ public class MeController : ControllerBase
     [HttpDelete]
     public async Task<IActionResult> DeleteAccount()
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
+
+        if (userId is null)
+            return Unauthorized();
+
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+
         if (user == null)
             return NotFound();
 
+        // Scrub PII on user
+        user.Name = null;
+        user.Email = null;
+        user.PasswordHash = null;
+        user.Role = null;
         user.DeletedAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync();
 
+        // Anonymize attempts: keep behavior, drop identity
+        var attempts = await _db.Attempts
+            .Where(a => a.UserId == userId)
+            .ToListAsync();
+
+        foreach (var attempt in attempts)
+        {
+            attempt.UserId = null;
+        }
+        
+        await _db.SaveChangesAsync();
         return NoContent();
     }
 
-    private Guid GetUserId()
+    /// <summary>
+    /// Aggregated training stats for the authenticated user.
+    /// Educational only — not for diagnosis.
+    /// </summary>
+    [HttpGet("progress")]
+    public async Task<ActionResult<TrainingStatsDto>> GetProgress()
     {
-        var sub = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                  ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        var userId = User.GetUserId();
+        if (userId is null)
+            return Unauthorized();
 
-        return Guid.TryParse(sub, out var id) ? id : Guid.Empty;
+        var attemptsQuery = _db.Attempts
+            .AsNoTracking()
+            .Include(a => a.Case)
+            .Where(a => a.UserId == userId);
+
+        var attempts = await attemptsQuery.ToListAsync();
+
+        if (!attempts.Any())
+        {
+            return Ok(new TrainingStatsDto(
+                0,
+                0,
+                null,
+                null,
+                null,
+                null,
+                null)
+            );
+        }
+
+        var totalAttempts = attempts.Count();
+        var uniqueAttempts = attempts.Select(a => a.CaseId).Distinct().Count();
+        var correct = attempts.Count(a => a.Correct);
+
+        double? accuracy = totalAttempts > 0
+            ? (double)correct / totalAttempts
+            : null;
+
+        // Sensitivity: correctly identified melanoma / all melanoma cases attempted
+        var malignantAttempts = attempts.Where(a => a.Case.Label == "malignant").ToList();
+        var malignantTotal = malignantAttempts.Count;
+        var malignantCorrect = malignantAttempts.Count(a => a.Correct);
+
+        double? sensitivity = malignantTotal > 0
+            ? (double)malignantCorrect / malignantTotal
+            : null;
+
+        // Specificity: correctly identified benign / all benign cases attempted
+        var benignAttempts = attempts.Where(a => a.Case.Label == "benign").ToList();
+        var benignTotal = benignAttempts.Count;
+        var benignCorrect = benignAttempts.Count(a => a.Correct);
+
+        double? specificity = benignTotal > 0
+            ? (double)benignCorrect / benignTotal
+            : null;
+
+        var firstAttemptAt = attempts.Min(a => a.CreatedAt);
+        var lastAttemptAt = attempts.Max(a => a.CreatedAt);
+
+        var dto = new TrainingStatsDto
+        (
+            totalAttempts,
+            uniqueAttempts,
+            accuracy,
+            sensitivity,
+            specificity,
+            firstAttemptAt,
+            lastAttemptAt
+        );
+
+        return Ok(dto);
     }
 }

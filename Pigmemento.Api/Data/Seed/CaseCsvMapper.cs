@@ -31,7 +31,6 @@ public static class CaseCsvMapper
             patientAge = parsedAge;
         }
 
-        // sex is string
         var rawSex = ((string?)row.sex)?.Trim().ToLowerInvariant();
         var sex = rawSex switch
         {
