@@ -314,6 +314,29 @@ public class CasesController : ControllerBase
 
         return Ok(dto);
     }
-    
-    
+
+    // GET /cases/drill?limit=10
+    [HttpGet("drill")]
+    [Authorize]
+    public async Task<ActionResult<IEnumerable<CaseDetailDto>>> GetDrillCases(
+        CancellationToken ct,
+        [FromQuery] int limit = 10)
+    {
+        limit = Math.Clamp(limit, 1, 50);
+
+        var cases = await _db.Cases
+            .OrderBy(c => Guid.NewGuid())
+            .Take(limit)
+            .Select(c => new CaseDetailDto(
+                    c.Id,
+                    c.ImageUrl,
+                    c.PatientAge,
+                    c.Site,
+                    c.ClinicalNote
+                )
+            )
+            .ToListAsync(ct);
+
+        return Ok(cases);
+    }
 }

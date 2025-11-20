@@ -108,7 +108,7 @@ public class MeController : ControllerBase
         {
             attempt.UserId = null;
         }
-        
+
         await _db.SaveChangesAsync();
         return NoContent();
     }
@@ -185,5 +185,63 @@ public class MeController : ControllerBase
         );
 
         return Ok(dto);
+    }
+
+    [HttpGet("mistakes")]
+    public async Task<ActionResult<IEnumerable<CaseListItemDto>>> GetMistakes(
+        CancellationToken ct,
+        [FromQuery] int limit = 20)
+    {
+        var userId = User.GetUserId();
+        if (userId is null)
+            return Unauthorized();
+
+        limit = Math.Clamp(limit, 1, 50);
+
+        // 1) Get all wrong attempts for this user, newest first
+        var wrongAttempts = await _db.Attempts
+            .Where(a => a.UserId == userId && !a.Correct)
+            .OrderByDescending(a => a.CreatedAt)
+            .ToListAsync(ct);
+
+        if (wrongAttempts.Count == 0)
+        {
+            return Ok(Array.Empty<CaseListItemDto>());
+        }
+
+        // 2) In memory: take latest wrong attempt per case
+        var lastWrongPerCase = wrongAttempts
+            .GroupBy(a => a.CaseId)
+            .Select(g => g.First()) // latest because we ordered desc above
+            .Take(limit)
+            .ToList();
+
+        var caseIds = lastWrongPerCase.Select(a => a.CaseId).ToList();
+
+        // 3) Fetch those cases
+        var cases = await _db.Cases
+            .Where(c => caseIds.Contains(c.Id))
+            .ToListAsync(ct);
+
+        var caseMap = cases.ToDictionary(c => c.Id);
+
+        // 4) Map back to DTOs in the same order as lastWrongPerCase
+        var result = lastWrongPerCase
+            .Where(a => caseMap.ContainsKey(a.CaseId))
+            .Select(a =>
+            {
+                var c = caseMap[a.CaseId];
+                return new CaseListItemDto(
+                    c.Id,
+                    c.ImageUrl,
+                    c.Difficulty,
+                    c.PatientAge,
+                    c.Site,
+                    null
+                );
+            })
+            .ToList();
+
+        return Ok(result);
     }
 }
