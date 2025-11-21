@@ -90,6 +90,10 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
+builder.Services.Configure<InferenceOptions>(builder.Configuration.GetSection("Inference"));
+builder.Services.AddHttpClient<IInferenceClient, PythonInferenceClient>();
+builder.Services.AddHttpClient("image-downloader");
+
 // --------------------------------------
 // CORS (Expo + Web + Prod domain)
 // --------------------------------------
