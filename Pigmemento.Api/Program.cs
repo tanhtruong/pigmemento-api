@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Pigmemento.Api.Auth;
 using Pigmemento.Api.Data;
+using Pigmemento.Api.Data.Seed;
 using Pigmemento.Api.Models;
 using Pigmemento.Api.Services;
 
@@ -89,10 +90,12 @@ builder.Services.AddAuthorization();
 // --------------------------------------
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddScoped<CaseSeeder>();
 
 builder.Services.Configure<InferenceOptions>(builder.Configuration.GetSection("Inference"));
 builder.Services.AddHttpClient<IInferenceClient, PythonInferenceClient>();
 builder.Services.AddHttpClient("image-downloader");
+
 
 // --------------------------------------
 // CORS (Expo + Web + Prod domain)
