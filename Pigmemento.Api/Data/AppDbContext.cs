@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<Case> Cases => Set<Case>();
     public DbSet<TeachingPoint> TeachingPoints => Set<TeachingPoint>();
     public DbSet<Attempt> Attempts => Set<Attempt>();
+    public DbSet<WaitlistEntry> WaitlistEntries => Set<WaitlistEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -39,6 +40,10 @@ public class AppDbContext : DbContext
             .WithMany(c => c.TeachingPoints)
             .HasForeignKey(tp => tp.CaseId)
             .OnDelete(DeleteBehavior.Cascade);
+        
+        modelBuilder.Entity<WaitlistEntry>()
+            .HasIndex(x => x.EmailHash)
+            .IsUnique();
     }
     
     public override int SaveChanges()
