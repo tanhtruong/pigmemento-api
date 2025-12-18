@@ -97,10 +97,6 @@ builder.Services.AddHttpClient<IInferenceClient, PythonInferenceClient>();
 builder.Services.AddHttpClient("image-downloader");
 
 
-builder.Services.Configure<InferenceOptions>(builder.Configuration.GetSection("Inference"));
-builder.Services.AddHttpClient<IInferenceClient, PythonInferenceClient>();
-builder.Services.AddHttpClient("image-downloader");
-
 // --------------------------------------
 // CORS (Expo + Web + Prod domain)
 // --------------------------------------
