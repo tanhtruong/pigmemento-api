@@ -108,6 +108,7 @@ builder.Services.AddCors(options =>
             .WithOrigins(
                 "http://localhost:19006",   // Expo
                 "http://localhost:3000",    // web dev
+                "http://localhost:5173",
                 "https://pigmemento.app",
                 "https://www.pigmemento.app"
             )

@@ -22,6 +22,6 @@ public record TrainingStatsDto(
     double? Specificity, // benign:      P(pred benign | true benign)
     
     // Optional extras for UI later
-    DateTime? FirstAtttemptAt,
-    DateTime? LastAtttemptAt
+    DateTime? FirstAttemptAt,
+    DateTime? LastAttemptAt
 );
